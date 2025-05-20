@@ -54,4 +54,20 @@ interface ApprovalWorkflowRepository : JpaRepository<ApprovalWorkflow, Long> {
     @Query("SELECT a FROM ApprovalWorkflow a WHERE a.requestId IN :requestIds AND a.level = 'SDM'")
     fun findSdmApprovalsByRequestIds(requestIds: List<Long>): List<ApprovalWorkflow>
 
+
+
+    @Query(
+        """
+    SELECT DISTINCT request_id
+    FROM approval_workflow
+    WHERE (level = 'SDM' AND status = 'APPROVED')
+       OR (level = 'HR_MANAGER' AND status IN ('APPROVED', 'REJECTED'))
+    ORDER BY request_id
+    """,
+        nativeQuery = true
+    )
+    fun findRequestsApprovedBySdmOrHr(): List<Long>
+
+
+
 }
