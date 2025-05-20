@@ -49,11 +49,11 @@ class SdmDashboardService(
                     ?.updatedDate,
                 teamOwnerName = request.teamOwnerId?.let {
                     employeeInfoRepository.findByIbsEmpId(it)?.userName
-                } ?: "Unknown"
+                } ?: "Unknown",
+                teamName =employeeMasterRepository.findByIbsEmpId(request.ibsEmpId)?.team
             )
         }
     }
-
     fun generateSdmCalendar(sdmId: Long): List<SdmCalendarDay> {
         // 1. Get teams managed by this SDM
         println(sdmId)
@@ -79,31 +79,36 @@ class SdmDashboardService(
                 else -> "PENDING" to null
             }
 
-            request.requestedStartDate.datesUntil(request.requestedEndDate.plusDays(1)).forEach { date ->
-                val teamMap = calendarMap.getOrPut(date) { mutableMapOf() }
-                val counts = teamMap.getOrPut(request.teamOwnerId!!) {
-                    SdmDayStatus(0, 0, 0, 0)
+            request.requestedStartDate.datesUntil(request.requestedEndDate.plusDays(1))
+                .filter { date ->
+                    // Exclude Saturdays (6) and Sundays (7)
+                    date.dayOfWeek.value < 6
                 }
+                .forEach { date ->
+                    val teamMap = calendarMap.getOrPut(date) { mutableMapOf() }
+                    val counts = teamMap.getOrPut(request.teamOwnerId!!) {
+                        SdmDayStatus(0, 0, 0, 0)
+                    }
 
-                when (status.first) {
-                    "APPROVED" -> {
-                        val newCount = if (status.second == null) {
-                            counts.copy(pendingWithHr = counts.pendingWithHr + 1)
-                        } else {
-                            counts.copy(approvedBySdm = counts.approvedBySdm + 1)
+                    when (status.first) {
+                        "APPROVED" -> {
+                            val newCount = if (status.second == null) {
+                                counts.copy(pendingWithHr = counts.pendingWithHr + 1)
+                            } else {
+                                counts.copy(approvedBySdm = counts.approvedBySdm + 1)
+                            }
+                            teamMap[request.teamOwnerId!!] = newCount
                         }
-                        teamMap[request.teamOwnerId!!] = newCount
-                    }
-                    "REJECTED" -> {
-                        teamMap[request.teamOwnerId!!] =
-                            counts.copy(rejectedBySdm = counts.rejectedBySdm + 1)
-                    }
-                    else -> {
-                        teamMap[request.teamOwnerId!!] =
-                            counts.copy(pendingWithSdm = counts.pendingWithSdm + 1)
+                        "REJECTED" -> {
+                            teamMap[request.teamOwnerId!!] =
+                                counts.copy(rejectedBySdm = counts.rejectedBySdm + 1)
+                        }
+                        else -> {
+                            teamMap[request.teamOwnerId!!] =
+                                counts.copy(pendingWithSdm = counts.pendingWithSdm + 1)
+                        }
                     }
                 }
-            }
         }
 
         return calendarMap.map { (date, teamStatus) ->
@@ -111,8 +116,12 @@ class SdmDashboardService(
         }.sortedBy { it.date }
     }
 
-
     fun getSdmDateDetails(date: LocalDate, sdmId: Long): List<SdmRequestDetail> {
+
+        // Skip weekends
+        if (date.dayOfWeek.value >= 6) {
+            return emptyList()
+        }
         // 1. Get all teamOwnerIds managed by the SDM
         val managedTeams = employeeMasterRepository.findByDmId(sdmId).map { it.teamOwnerId }
 

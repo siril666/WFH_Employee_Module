@@ -10,5 +10,6 @@ data class WfhRequestForSdm(
     val sdmStatus: String,
     val hrStatus: String?,
     val sdmUpdatedDate: LocalDate?,
-    val teamOwnerName:String?
+    val teamOwnerName:String?,
+    val teamName:String?
 )
