@@ -7,6 +7,8 @@ import com.wfo_exception_tracker.wfh_exception.entity.WfhRequest
 import com.wfo_exception_tracker.wfh_exception.repository.EmployeeInfoRepository
 import com.wfo_exception_tracker.wfh_exception.repository.EmployeeMasterRepository
 import com.wfo_exception_tracker.wfh_exception.service.WfhRequestService
+import jakarta.servlet.http.HttpServletResponse
+import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -15,7 +17,7 @@ import java.time.LocalDate
 
 @RestController
 @RequestMapping("/wfh-requests")
-@CrossOrigin(origins = ["http://localhost:5173"]) // Adjust as needed for your frontend
+@CrossOrigin(origins = ["http://localhost:5173","*"]) // Adjust as needed for your frontend
 class WfhRequestController(
     private val wfhRequestService: WfhRequestService,
     private val employeeInfoRepository: EmployeeInfoRepository,
@@ -75,8 +77,10 @@ class WfhRequestController(
             mapOf(
                 "employeeName" to info.userName,
                 "ibsEmpId" to info.ibsEmpId,
+                "teamOwnerName" to master.teamOwner,
                 "teamOwnerId" to master.teamOwnerId,
                 "dmId" to master.dmId,
+                "dmName" to master.dm,
                 "currentLocation" to master.location
             )
         )
@@ -132,4 +136,12 @@ class WfhRequestController(
 
     }
 
+
+
+
+
 }
+
+
+
+
