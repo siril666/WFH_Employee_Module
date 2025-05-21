@@ -28,7 +28,9 @@ class EmployeeDashboardService(
                 WfhCalendarEntryForEmployee(
                     date = date,
                     status = request.status.name,
-                    reason = request.employeeReason
+                    reason = request.employeeReason,
+                    priorityLevel = request.priority,
+                    categoryOfReason = request.categoryOfReason
                 )
             }
         }.sortedBy { it.date }

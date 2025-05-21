@@ -5,5 +5,8 @@ import java.time.LocalDate
 data class WfhCalendarEntryForEmployee(
     val date: LocalDate,
     val status: String,
-    val reason: String
+    val reason: String,
+    val priorityLevel: PriorityLevel,
+    val categoryOfReason: String
+
 )
