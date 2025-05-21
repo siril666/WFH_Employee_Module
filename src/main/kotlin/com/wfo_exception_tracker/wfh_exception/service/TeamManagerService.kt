@@ -8,6 +8,7 @@ import com.wfo_exception_tracker.wfh_exception.repository.ApprovalWorkflowReposi
 import com.wfo_exception_tracker.wfh_exception.repository.EmployeeInfoRepository
 import com.wfo_exception_tracker.wfh_exception.repository.WfhRequestRepository
 import org.springframework.stereotype.Service
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 @Service
@@ -42,15 +43,24 @@ class TeamManagerService(
         for (req in approvedRequests) {
             var date = req.requestedStartDate
             while (!date.isAfter(req.requestedEndDate)) {
-                val dateStr = date.toString()  // Convert to "yyyy-MM-dd"
-                dateMap[dateStr] = dateMap.getOrDefault(dateStr, 0) + 1
+                val dayOfWeek = date.dayOfWeek
+                if (dayOfWeek != DayOfWeek.SATURDAY && dayOfWeek != DayOfWeek.SUNDAY) {
+                    val dateStr = date.toString()  // Format: yyyy-MM-dd
+                    dateMap[dateStr] = dateMap.getOrDefault(dateStr, 0) + 1
+                }
                 date = date.plusDays(1)
             }
         }
         return dateMap
     }
 
+
     fun getApprovedEmployeesByDate(teamOwnerId: Long, date: LocalDate): List<Map<String, Any>> {
+        val dayOfWeek = date.dayOfWeek
+        if (dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY) {
+            return emptyList() // No WFH on weekends
+        }
+
         return wfhRequestRepository.findByTeamOwnerId(teamOwnerId)
             .filter {
                 it.status == RequestStatus.APPROVED &&
