@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/employee")
-@CrossOrigin(origins = ["http://localhost:5173","http://localhost:5174"])
+@CrossOrigin(origins = ["*"])
 class EmployeeDashboardController(
     private val dashboardService: EmployeeDashboardService,
     private val wfhRequestRepository: WfhRequestRepository

@@ -20,7 +20,7 @@ import java.time.LocalDate
 
 @RestController
 @RequestMapping("/hr")
-@CrossOrigin(origins = ["http://localhost:5173"])
+@CrossOrigin(origins = ["*"])
 class HrDashboardController(
     private val hrDashboardService: HrDashboardService,
     private val userService: UserService,

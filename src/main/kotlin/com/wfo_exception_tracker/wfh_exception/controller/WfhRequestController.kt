@@ -17,7 +17,7 @@ import java.time.LocalDate
 
 @RestController
 @RequestMapping("/wfh-requests")
-@CrossOrigin(origins = ["http://localhost:5173","*"]) // Adjust as needed for your frontend
+@CrossOrigin(origins = ["*"]) // Adjust as needed for your frontend
 class WfhRequestController(
     private val wfhRequestService: WfhRequestService,
     private val employeeInfoRepository: EmployeeInfoRepository,

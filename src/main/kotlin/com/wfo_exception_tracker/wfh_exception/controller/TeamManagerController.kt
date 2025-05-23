@@ -16,7 +16,7 @@ import java.time.LocalDate
 
 @RestController
 @RequestMapping("/tm")
-@CrossOrigin(origins = ["http://localhost:5173"])
+@CrossOrigin(origins = ["*"])
 class TeamManagerController(
     private val teamManagerService: TeamManagerService,
     private val userService: UserService
