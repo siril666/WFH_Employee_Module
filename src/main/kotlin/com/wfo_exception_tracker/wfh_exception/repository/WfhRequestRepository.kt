@@ -8,8 +8,6 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import java.time.LocalDate
-import com.wfo_exception_tracker.wfh_exception.dto.GraphReportView
-import com.wfo_exception_tracker.wfh_exception.dto.WfhRequestReportView
 
 @Repository
 interface WfhRequestRepository : JpaRepository<WfhRequest, Long> {
@@ -105,72 +103,6 @@ interface WfhRequestRepository : JpaRepository<WfhRequest, Long> {
 
     ): List<WfhRequest>
 
-
-    @Query(
-        nativeQuery = true,
-        value = """
-    SELECT r.request_id AS requestId,
-           r.ibs_emp_id AS ibsEmpId,
-           e.user_name AS employeeName,
-           m.team AS team,
-           r.requested_start_date AS requestedStartDate,
-           r.requested_end_date AS requestedEndDate,
-           r.category_of_reason AS categoryOfReason,
-           r.priority AS priority,
-           r.status AS status
-    FROM wfh_request r
-    INNER JOIN employee_info e ON r.ibs_emp_id = e.ibs_emp_id
-    INNER JOIN employee_master m ON r.ibs_emp_id = m.ibs_emp_id
-    WHERE r.request_id IN (
-        SELECT DISTINCT request_id
-        FROM approval_workflow
-        WHERE (level = 'SDM' AND status = 'APPROVED')
-           OR (level = 'HR_MANAGER' AND status IN ('APPROVED', 'REJECTED'))
-    )
-    AND (:teamName IS NULL OR LOWER(m.team) LIKE LOWER(CONCAT('%', :teamName, '%')))
-    AND (
-        CAST(:date AS DATE) IS NULL OR 
-        (r.requested_start_date <= CAST(:date AS DATE) AND r.requested_end_date >= CAST(:date AS DATE))
-    )
-    """
-    )
-    fun findApprovedRequestsByTeamAndDate(
-        @Param("teamName") teamName: String?,
-        @Param("date") date: LocalDate?
-    ): List<WfhRequestReportView>
-
-
-
-    @Query(
-        nativeQuery = true,
-        value = """
-    SELECT 
-      EXTRACT(YEAR FROM r.requested_start_date) AS year,
-      CASE 
-        WHEN :period = 'WEEK' THEN EXTRACT(WEEK FROM r.requested_start_date)
-        WHEN :period = 'MONTH' THEN EXTRACT(MONTH FROM r.requested_start_date)
-        WHEN :period = 'QUARTER' THEN EXTRACT(QUARTER FROM r.requested_start_date)
-      END AS period_value,
-      m.team AS team,
-      r.status AS status,                     -- Add status here
-      COUNT(*) AS request_count
-    FROM wfh_request r
-    JOIN employee_master m ON r.ibs_emp_id = m.ibs_emp_id
-    WHERE r.request_id IN (
-        SELECT DISTINCT request_id
-        FROM approval_workflow
-        WHERE (level = 'SDM' AND status = 'APPROVED')
-           OR (level = 'HR_MANAGER' AND status IN ('APPROVED', 'REJECTED'))
-    )
-    AND (:teamName IS NULL OR LOWER(m.team) LIKE LOWER(CONCAT('%', :teamName, '%')))
-    GROUP BY year, period_value, m.team, r.status          -- Add r.status here too
-    ORDER BY year, period_value, r.status
-    """
-    )
-    fun getRequestsReport(
-        @Param("period") period: String,
-        @Param("teamName") teamName: String?
-    ): List<GraphReportView>
 
 
 }
