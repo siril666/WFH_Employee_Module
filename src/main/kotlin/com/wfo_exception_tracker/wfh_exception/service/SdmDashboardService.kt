@@ -20,38 +20,65 @@ class SdmDashboardService(
 ) {
 
     fun getRequestsForSdm(sdmEmpId: Long): List<WfhRequestForSdm> {
+        try {
+            // 1. Get all team owners (TMs) who report to this SDM
+            val teamOwners = employeeMasterRepository.findByDmId(sdmEmpId).map { it.teamOwnerId }
+                .takeIf { it.isNotEmpty() }
+                ?: return emptyList()
 
-        // 1. Get all team owners (TMs) who report to this SDM
-        val teamOwners = employeeMasterRepository.findByDmId(sdmEmpId).map { it.teamOwnerId }
+            // 2. Get request IDs approved by these TMs
+            val tmApprovedRequestIds = approvalWorkflowRepository.findApprovedRequestIdsByTeamManager(teamOwners)
+                .takeIf { it.isNotEmpty() }
+                ?: return emptyList()
 
-        // 2. Get request IDs approved by these TMs
-        val tmApprovedRequestIds = approvalWorkflowRepository.findApprovedRequestIdsByTeamManager(teamOwners)
+            // 3. Get the complete WFH requests
+            val wfhRequests = wfhRequestRepository.findByRequestIdIn(tmApprovedRequestIds)
+                .sortedByDescending { it.requestedStartDate }
 
-        // 3. Get the complete WFH requests
-        val wfhRequests = wfhRequestRepository.findByRequestIdIn(tmApprovedRequestIds)
+            // 4. Get all relevant approvals in one query
+            val allApprovals = approvalWorkflowRepository.findByRequestIdIn(tmApprovedRequestIds)
+                .groupBy { it.requestId }
 
-        // 4. Get all relevant approvals in one query
-        val allApprovals = approvalWorkflowRepository.findByRequestIdIn(tmApprovedRequestIds)
+            return wfhRequests.map { request ->
+                val requestApprovals = allApprovals[request.requestId] ?: emptyList()
 
-        return wfhRequests.map { request ->
-            val requestApprovals = allApprovals.filter { it.requestId == request.requestId }
-            WfhRequestForSdm(
-                employeeName = employeeInfoRepository.findByIbsEmpId(request.ibsEmpId)?.userName ?:"unknown",
-                request = request,
-                sdmStatus = requestApprovals
-                    .firstOrNull { it.level == ApprovalLevel.SDM }
-                    ?.status?.toString() ?: "PENDING",
-                hrStatus = requestApprovals
-                    .firstOrNull { it.level == ApprovalLevel.HR_MANAGER }
-                    ?.status?.toString(),
-                sdmUpdatedDate = requestApprovals
-                    .firstOrNull { it.level == ApprovalLevel.SDM }
-                    ?.updatedDate,
-                teamOwnerName = request.teamOwnerId?.let {
-                    employeeInfoRepository.findByIbsEmpId(it)?.userName
-                } ?: "Unknown",
-                teamName =employeeMasterRepository.findByIbsEmpId(request.ibsEmpId)?.team
-            )
+                // Validate workflow records exist for non-pending statuses
+                if (request.status != RequestStatus.PENDING) {
+                    val sdmApproval = requestApprovals
+                        .firstOrNull { it.level == ApprovalLevel.SDM }
+                        ?: throw IllegalStateException("SDM workflow record missing for request ${request.requestId}")
+
+                    // Validate status consistency
+                    if (sdmApproval.status.name != request.status.name) {
+                        throw IllegalStateException(
+                            "Status mismatch between wfh_request (${request.status}) " +
+                                    "and SDM approval (${sdmApproval.status}) for request ${request.requestId}"
+                        )
+                    }
+                }
+
+                WfhRequestForSdm(
+                    employeeName = employeeInfoRepository.findByIbsEmpId(request.ibsEmpId)?.userName
+                        ?: throw IllegalStateException("Employee info not found for ID ${request.ibsEmpId}"),
+                    request = request,
+                    sdmStatus = requestApprovals
+                        .firstOrNull { it.level == ApprovalLevel.SDM }
+                        ?.status?.toString() ?: "PENDING",
+                    hrStatus = requestApprovals
+                        .firstOrNull { it.level == ApprovalLevel.HR_MANAGER }
+                        ?.status?.toString(),
+                    sdmUpdatedDate = requestApprovals
+                        .firstOrNull { it.level == ApprovalLevel.SDM }
+                        ?.updatedDate,
+                    teamOwnerName = request.teamOwnerId?.let {
+                        employeeInfoRepository.findByIbsEmpId(it)?.userName
+                    } ?: throw IllegalStateException("Team owner info not found for ID ${request.teamOwnerId}"),
+                    teamName = employeeMasterRepository.findByIbsEmpId(request.ibsEmpId)?.team
+                        ?: throw IllegalStateException("Employee master record not found for ID ${request.ibsEmpId}")
+                )
+            }
+        } catch (ex: Exception) {
+            throw IllegalStateException("Failed to fetch SDM requests: ${ex.message}", ex)
         }
     }
     fun generateSdmCalendar(sdmId: Long): List<SdmCalendarDay> {
