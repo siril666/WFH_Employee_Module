@@ -2,6 +2,7 @@ package com.wfo_exception_tracker.wfh_exception.controller
 
 import com.wfo_exception_tracker.wfh_exception.authdata.AuthUtils
 import com.wfo_exception_tracker.wfh_exception.dtos.WfhCalendarEntryForEmployee
+import com.wfo_exception_tracker.wfh_exception.dtos.WfhRequestWithStatus
 import com.wfo_exception_tracker.wfh_exception.entity.WfhRequest
 import com.wfo_exception_tracker.wfh_exception.repository.WfhRequestRepository
 import com.wfo_exception_tracker.wfh_exception.service.EmployeeDashboardService
@@ -22,6 +23,11 @@ class EmployeeDashboardController(
     @GetMapping("/requests")
     fun getRequestHistory(): ResponseEntity<List<WfhRequest>> {
         return ResponseEntity.ok(dashboardService.getRequestHistory(AuthUtils.getCurrentUserId()))
+    }
+
+    @GetMapping("/requests/status")
+    fun getRequestHistoryWithStatus(): ResponseEntity<List<WfhRequestWithStatus>> {
+        return ResponseEntity.ok(dashboardService.getEmployeeRequestsWithStatus(AuthUtils.getCurrentUserId()))
     }
 
     //2. API to get all request dates of the employee by id for calendar
