@@ -9,5 +9,6 @@ data class WfhRequestForHr(
     val hrStatus: String,
     val hrUpdatedDate: LocalDate?,
     val userName : String?,
-    val teamOwnerName : String?
+    val teamOwnerName : String?,
+    val sdmName : String ?
 )

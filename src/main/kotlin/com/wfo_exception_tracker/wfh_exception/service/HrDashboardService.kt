@@ -65,7 +65,8 @@ class HrDashboardService(
                         .findByRequestIdAndLevel(request.requestId, ApprovalLevel.HR_MANAGER)
                         ?.updatedDate,
                     userName = employeeInfoRepository.findByIbsEmpId(request.ibsEmpId)?.userName,
-                    teamOwnerName = request.teamOwnerId?.let { employeeInfoRepository.findByIbsEmpId(it)?.userName }
+                    teamOwnerName = request.teamOwnerId?.let { employeeInfoRepository.findByIbsEmpId(it)?.userName },
+                    sdmName = request.dmId?.let{employeeInfoRepository.findByIbsEmpId(it)?.userName}
                 )
             }
     }
