@@ -20,9 +20,8 @@ class SecurityConfig(
         http
             .cors {  }
             .authorizeHttpRequests { auth -> auth
-                    .requestMatchers("/auth/**").permitAll()
-                    .anyRequest()
-                    .authenticated()
+                .requestMatchers("/auth/**", "/uploads/**").permitAll()
+                .anyRequest().authenticated()
             }
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter::class.java)
             .csrf { it.disable() }

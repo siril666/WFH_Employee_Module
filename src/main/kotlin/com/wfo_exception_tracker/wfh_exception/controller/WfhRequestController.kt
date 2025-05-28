@@ -7,12 +7,13 @@ import com.wfo_exception_tracker.wfh_exception.entity.WfhRequest
 import com.wfo_exception_tracker.wfh_exception.repository.EmployeeInfoRepository
 import com.wfo_exception_tracker.wfh_exception.repository.EmployeeMasterRepository
 import com.wfo_exception_tracker.wfh_exception.service.WfhRequestService
-import jakarta.servlet.http.HttpServletResponse
-import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
 import java.time.LocalDate
 
 @RestController
@@ -26,31 +27,52 @@ class WfhRequestController(
 
     //1. API to submit a new WFH request
     @PostMapping("/submit")
-    fun submitRequest(@RequestParam ibsEmpId: Long,
-                      @RequestParam requestedStartDate: LocalDate,
-                      @RequestParam requestedEndDate: LocalDate,
-                      @RequestParam teamOwnerId: Long,
-                      @RequestParam employeeReason: String,
-                      @RequestParam categoryOfReason: String,
-                      @RequestParam dmId: Long,
-                      @RequestParam termDuration: String,
-                      @RequestParam priority: PriorityLevel,
-                      @RequestParam  location: String,
-                      @RequestParam("attachment") attachment: MultipartFile?): ResponseEntity<String> {
-        val request= WfhRequest(
+    fun submitRequest(
+        @RequestParam ibsEmpId: Long,
+        @RequestParam requestedStartDate: LocalDate,
+        @RequestParam requestedEndDate: LocalDate,
+        @RequestParam employeeReason: String,
+        @RequestParam categoryOfReason: String,
+        @RequestParam teamOwnerId: Long?,
+        @RequestParam dmId: Long?,
+        @RequestParam termDuration: String,
+        @RequestParam priority: PriorityLevel,
+        @RequestParam location: String,
+        @RequestParam("attachment") attachment: MultipartFile?
+    ): ResponseEntity<String> {
+        var fileUrl: String? = null
+
+        // 1. Save the attachment if it's not null or empty
+        if (attachment != null && !attachment.isEmpty) {
+            val uploadDir = Paths.get("uploads")  // Directory in project root
+
+            if (!Files.exists(uploadDir)) {
+                Files.createDirectories(uploadDir)
+            }
+
+            val filename = "${System.currentTimeMillis()}_${attachment.originalFilename}"
+            val file = uploadDir.resolve(filename)
+            Files.copy(attachment.inputStream, file, StandardCopyOption.REPLACE_EXISTING)
+
+            fileUrl = "/uploads/$filename"  // This URL will be accessible via http://localhost:8080
+        }
+
+        // 2. Create the request with the web-accessible URL
+        val request = WfhRequest(
             ibsEmpId = ibsEmpId,
             requestedStartDate = requestedStartDate,
             requestedEndDate = requestedEndDate,
             employeeReason = employeeReason,
             categoryOfReason = categoryOfReason,
             status = RequestStatus.PENDING,
+            teamOwnerId = teamOwnerId,
             dmId = dmId,
             termDuration = termDuration,
             priority = priority,
             currentLocation = location,
-            attachmentPath = " ",
-            teamOwnerId = teamOwnerId
+            attachmentPath = fileUrl  // Now stores a web URL instead of filesystem path
         )
+
         val saved = wfhRequestService.createWfhRequest(request)
         return ResponseEntity.ok("Request Submitted! ID: ${saved.requestId}")
     }
