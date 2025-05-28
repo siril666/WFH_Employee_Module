@@ -3,10 +3,7 @@ package com.wfo_exception_tracker.wfh_exception.controller
 
 import com.wfo_exception_tracker.wfh_exception.authdata.AuthUtils
 import com.wfo_exception_tracker.wfh_exception.dto.WfhRequestDto
-import com.wfo_exception_tracker.wfh_exception.dtos.ApprovalLevel
-import com.wfo_exception_tracker.wfh_exception.dtos.FullEmployeeDetailsWithApproval
-import com.wfo_exception_tracker.wfh_exception.dtos.WorkflowStatus
-import com.wfo_exception_tracker.wfh_exception.dtos.WfhRequestForTm
+import com.wfo_exception_tracker.wfh_exception.dtos.*
 import com.wfo_exception_tracker.wfh_exception.exception.ResourceNotFoundException
 import com.wfo_exception_tracker.wfh_exception.service.TeamManagerService
 import com.wfo_exception_tracker.wfh_exception.service.UserService
@@ -55,10 +52,11 @@ class TeamManagerController(
     }
 
     @GetMapping("/calendar")
-    fun getWFHCalendar(): ResponseEntity<Map<String, Int>> {
-        return ResponseEntity.ok(teamManagerService.getWFHCalendarData(AuthUtils.getCurrentUserId()))
+    fun getTeamManagerCalendar(): ResponseEntity<List<TeamManagerCalendarDay>> {
+        val currentUserId = AuthUtils.getCurrentUserId()
+        val calendarData = teamManagerService.getTeamManagerCalendar(currentUserId)
+        return ResponseEntity.ok(calendarData)
     }
-
     @GetMapping("/employees-on-date")
     fun getEmployeesForDate(
         @RequestParam date: LocalDate
