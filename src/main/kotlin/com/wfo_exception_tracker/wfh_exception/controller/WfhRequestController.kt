@@ -3,7 +3,10 @@ package com.wfo_exception_tracker.wfh_exception.controller
 import com.wfo_exception_tracker.wfh_exception.authdata.AuthUtils
 import com.wfo_exception_tracker.wfh_exception.dtos.PriorityLevel
 import com.wfo_exception_tracker.wfh_exception.dtos.RequestStatus
+import com.wfo_exception_tracker.wfh_exception.dtos.WorkflowStatus
+import com.wfo_exception_tracker.wfh_exception.entity.ApprovalWorkflow
 import com.wfo_exception_tracker.wfh_exception.entity.WfhRequest
+import com.wfo_exception_tracker.wfh_exception.repository.ApprovalWorkflowRepository
 import com.wfo_exception_tracker.wfh_exception.repository.EmployeeInfoRepository
 import com.wfo_exception_tracker.wfh_exception.repository.EmployeeMasterRepository
 import com.wfo_exception_tracker.wfh_exception.service.WfhRequestService
@@ -22,7 +25,8 @@ import java.time.LocalDate
 class WfhRequestController(
     private val wfhRequestService: WfhRequestService,
     private val employeeInfoRepository: EmployeeInfoRepository,
-    private val employeeMasterRepository: EmployeeMasterRepository
+    private val employeeMasterRepository: EmployeeMasterRepository,
+    private val approvalWorkflowRepository: ApprovalWorkflowRepository
 ) {
 
     //1. API to submit a new WFH request
@@ -152,14 +156,34 @@ class WfhRequestController(
         return ResponseEntity.ok("Request updated successfully! ID: ${savedRequest.requestId}")
     }
 
+//    @DeleteMapping("/{requestId}")
+//    fun cancelRequest(@PathVariable requestId: Long){
+//        wfhRequestService.cancelWfhRequest(requestId)
+//
+//    }
+
+
     @DeleteMapping("/{requestId}")
-    fun cancelRequest(@PathVariable requestId: Long){
-        wfhRequestService.cancelWfhRequest(requestId)
+    fun cancelRequest(@PathVariable requestId: Long): ResponseEntity<String> {
+        // Check if the request has any approvals
+        val approvals = approvalWorkflowRepository.findByRequestId(requestId)
 
+        // If any approval exists with status APPROVED, return error
+        if (approvals.any { it.status == WorkflowStatus.APPROVED }) {
+            return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body("Cannot cancel request that has been approved")
+        }
+
+        try {
+            wfhRequestService.cancelWfhRequest(requestId)
+            return ResponseEntity.ok("Request cancelled successfully")
+        } catch (e: Exception) {
+            return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Failed to cancel request: ${e.message}")
+        }
     }
-
-
-
 
 
 }
